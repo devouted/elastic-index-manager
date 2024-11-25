@@ -15,7 +15,7 @@ composer require devouted/elastic-index-manager
 Add the following configuration to your services.yaml to register the command:
 
 ```yaml
-Skopiuj kod
+Copy code
 Devouted\ElasticIndexManager\Command\ElasticIndexManagerCommand:
     tags: ['console.command']
 ```
