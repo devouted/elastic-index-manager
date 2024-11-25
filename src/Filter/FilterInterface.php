@@ -4,5 +4,5 @@ namespace Devouted\ElasticIndexManager\Filter;
 
 interface FilterInterface
 {
-    public static function filter(array $indexList): array;
+    public function filter(array $indexList): array;
 }

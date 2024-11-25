@@ -2,12 +2,16 @@
 
 namespace Devouted\ElasticIndexManager\Filter;
 
-class FilterNotEmptyIndexes implements FilterInterface
+class FilterByNameOfIndexes implements FilterInterface
 {
+    public function __construct(private readonly string $search)
+    {
+    }
+
     public function filter(array $indexList): array
     {
         foreach ($indexList as $key => $index) {
-            if ($index['docs.count'] !== "0") {
+            if (!str_contains($index['index'], $this->search)) {
                 unset($indexList[$key]);
             }
         }

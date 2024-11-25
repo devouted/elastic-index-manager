@@ -2,6 +2,7 @@
 
 namespace Devouted\ElasticIndexManager\Command;
 
+use Devouted\ElasticIndexManager\Filter\FilterByNameOfIndexes;
 use Devouted\ElasticIndexManager\Filter\FilterInterface;
 use Devouted\ElasticIndexManager\Filter\FilterNotEmptyIndexes;
 use Devouted\ElasticIndexManager\TableRenderer\TableRenderer;
@@ -24,11 +25,14 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 )]
 class ElasticIndexManagerCommand extends Command
 {
+    const ID_COLUMN = "ID";
     private array $connectionServices = [];
     private array $indexesList = [];
     private ?Client $client = null;
     private readonly QuestionHelper $helper;
     private ?FilterInterface $filter = null;
+    private $sortOrder = 'asc';
+    private $sortColumn = 'docs.count';
 
     public function __construct(
         private readonly ContainerInterface $container,
@@ -105,14 +109,19 @@ class ElasticIndexManagerCommand extends Command
             $indexes = $this->filter->filter($indexes);
         }
 
+        usort($indexes, function ($a, $b) {
+            return $this->sortOrder === 'asc' ? $a[$this->sortColumn] <=> $b[$this->sortColumn] : $b[$this->sortColumn] <=> $a[$this->sortColumn];
+        });
+
         foreach ($indexes as $key => $index) {
-            $index["ID"] = $key;
+            $index[self::ID_COLUMN] = $key;
             $indexes[$key] = $index;
         }
 
         $this->indexesList = array_column($indexes, 'index');
 
         if (!empty($indexes)) {
+
             $renderer = new TableRenderer(array_keys($indexes[0]));
             $renderer->render($indexes);
         }
@@ -120,6 +129,8 @@ class ElasticIndexManagerCommand extends Command
             "Back to connection list",
             "Reset filter",
             "Filter for empty indexes (docs.count = 0)",
+            "Filter by index pattern",
+            "Sort",
             "Delete an index",
             "Delete all indexes by filter"
         ];
@@ -140,8 +151,12 @@ class ElasticIndexManagerCommand extends Command
             case 'Filter for empty indexes (docs.count = 0)':
                 $this->filter = new FilterNotEmptyIndexes();
                 break;
+            case 'Filter by index pattern':
+                $search = trim($this->helper->ask($input, $output, new Question("Please provide a string that will try to mach: ")));
+                $this->filter = new FilterByNameOfIndexes($search);
+                break;
             case 'Delete an index':
-                $name = trim($this->helper->ask($input, $output, new Question("Please provide name or ID of the index: ")));
+                $name = trim($this->helper->ask($input, $output, new Question("Please provide name or " . self::ID_COLUMN . " of the index: ")));
                 if (is_string($name) && $name !== "" &&
                     (
                         (is_numeric($name) && key_exists($name, $indexes)) ||
@@ -152,7 +167,7 @@ class ElasticIndexManagerCommand extends Command
                     $output->writeln('<warning>Please confirm if you would like to delete index: ' . $name . '!</warning>');
                     if ($this->confirmationQuestion($input, $output)) {
                         $output->writeln('<info>Deleting index: ' . $name . '!</info>');
-                        $this->client->indices()->delete(['index'=>$name]);
+                        $this->client->indices()->delete(['index' => $name]);
                         $output->writeln('<info>Deleted index: ' . $name . '! Reloading...</info>');
                         sleep(4);
                     }
@@ -164,21 +179,35 @@ class ElasticIndexManagerCommand extends Command
             case 'Reset filter':
                 $this->filter = null;
                 break;
+            case 'Sort':
+                $question = new ChoiceQuestion(
+                    'Chose column',
+                    array_keys($indexes[0]),
+                    0
+                );
+                $this->sortColumn = $this->helper->ask($input, $output, $question);
+                $question = new ChoiceQuestion(
+                    'Chose order',
+                    ['asc', 'desc'],
+                    0
+                );
+                $this->sortOrder = $this->helper->ask($input, $output, $question);
+                break;
             case 'Delete all indexes by filter':
-                if(is_null($this->filter)) {
+                if (is_null($this->filter)) {
                     $output->writeln('<error>You did not provide any filter. Reloading</error>');
                     sleep(2);
-                }
-                else{
+                } else {
                     $output->writeln('<comment>Indexes from list will be deleted!</comment>');
                     print_r($this->indexesList);
                     if ($this->confirmationQuestion($input, $output)) {
-                        foreach($this->indexesList as $name){
+                        foreach ($this->indexesList as $name) {
                             $output->writeln('<info>Deleting index: ' . $name . '!</info>');
-                            $this->client->indices()->delete(['index'=>$name]);
+                            $this->client->indices()->delete(['index' => $name]);
                             $output->writeln('<info>Deleted index: ' . $name . '</info>');
                         }
                         $output->writeln('<info>Reloading...</info>');
+                        $this->filter = null;
                         sleep(5);
                     }
                 }
