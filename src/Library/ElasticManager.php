@@ -94,4 +94,19 @@ class ElasticManager
         ];
         return $this->client->indices()->putTemplate($params);
     }
+
+    public function getLastRecords(string $index, int $records = 10) : array
+    {
+        $params = [
+            'index' => $index,
+            'size' => $records,
+            'body' => [
+                'query' => [
+                    'match_all' => new \stdClass()
+                ]
+            ]
+        ];
+
+        return $this->client->search($params);
+    }
 }

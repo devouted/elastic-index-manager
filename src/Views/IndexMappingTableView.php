@@ -76,6 +76,11 @@ class IndexMappingTableView
             case IndexMappingTableActions::BACK_TO_INDEX_LIST_TABLE->value:
                 $this->running = false;
                 break;
+            case IndexMappingTableActions::SHOW_SAMPLE_DATA->value:
+                $indexData = $this->elasticManager->getLastRecords($this->indexName);
+                dump($indexData);
+                $this->confirmationQuestion();
+                break;
             case IndexMappingTableActions::DELETE_AN_INDEX->value:
                 $this->deleteSingleIndexAction($this->indexName);
                 $this->running = false;
