@@ -41,7 +41,7 @@ class Messages
 
     public function warning(string $message): void
     {
-        $this->writeToOutput($message);
+        $this->writeToOutput($message, 'custom-warning');
     }
 
     public function error(string $message): void
@@ -51,7 +51,7 @@ class Messages
 
     private function writeToOutput(string $message, string $type = "comment"): void
     {
-        $this->output->writeln('<' . $type . '>' . $message . '!</' . $type . '>');
+        $this->output->writeln('<' . $type . '>' . $message . '</' . $type . '>');
     }
 
 }

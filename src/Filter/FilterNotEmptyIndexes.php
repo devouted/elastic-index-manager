@@ -2,7 +2,7 @@
 
 namespace Devouted\ElasticIndexManager\Filter;
 
-use Devouted\ElasticIndexManager\Dictionary\IndexActions;
+use Devouted\ElasticIndexManager\Dictionary\IndexTableActions;
 
 class FilterNotEmptyIndexes implements FilterInterface
 {
@@ -18,6 +18,6 @@ class FilterNotEmptyIndexes implements FilterInterface
 
     public function getName(): string
     {
-        return '<fg=green>' . IndexActions::FILTER_EMPTY_INDEXES->value . '</>';
+        return '<fg=green>' . IndexTableActions::FILTER_EMPTY_INDEXES->value . '</>';
     }
 }

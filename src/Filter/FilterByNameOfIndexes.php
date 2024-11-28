@@ -2,7 +2,7 @@
 
 namespace Devouted\ElasticIndexManager\Filter;
 
-use Devouted\ElasticIndexManager\Dictionary\IndexActions;
+use Devouted\ElasticIndexManager\Dictionary\IndexTableActions;
 
 class FilterByNameOfIndexes implements FilterInterface
 {
@@ -22,7 +22,7 @@ class FilterByNameOfIndexes implements FilterInterface
 
     public function getName(): string
     {
-        return IndexActions::FILTER_BY_INDEX_PATTERN->value . ": <fg=green>" . $this->search . '</>';
+        return IndexTableActions::FILTER_BY_INDEX_PATTERN->value . ": <fg=green>" . $this->search . '</>';
     }
 
 }

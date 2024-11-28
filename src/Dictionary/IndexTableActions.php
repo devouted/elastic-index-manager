@@ -1,7 +1,7 @@
 <?php
 
 namespace Devouted\ElasticIndexManager\Dictionary;
-enum IndexActions: string
+enum IndexTableActions: string
 {
     case CHANGE_ELASTIC_CLIENT = 'Change Elastic Client';
     case FILTER_EMPTY_INDEXES = 'Filter for empty indexes (docs.count = 0)';
