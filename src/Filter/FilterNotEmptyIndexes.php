@@ -2,6 +2,8 @@
 
 namespace Devouted\ElasticIndexManager\Filter;
 
+use Devouted\ElasticIndexManager\Dictionary\IndexActions;
+
 class FilterNotEmptyIndexes implements FilterInterface
 {
     public function filter(array $indexList): array
@@ -12,5 +14,10 @@ class FilterNotEmptyIndexes implements FilterInterface
             }
         }
         return array_values($indexList);
+    }
+
+    public function getName(): string
+    {
+        return '<fg=green>' . IndexActions::FILTER_EMPTY_INDEXES->value . '</>';
     }
 }

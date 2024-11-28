@@ -3,18 +3,20 @@
 namespace Devouted\ElasticIndexManager\Views;
 
 use Devouted\ElasticIndexManager\Dictionary\IndexActions;
-use Devouted\ElasticIndexManager\ElasticManager\ElasticManager;
 use Devouted\ElasticIndexManager\Filter\FilterByNameOfIndexes;
 use Devouted\ElasticIndexManager\Filter\FilterInterface;
 use Devouted\ElasticIndexManager\Filter\FilterNotEmptyIndexes;
+use Devouted\ElasticIndexManager\Library\ElasticManager;
+use Devouted\ElasticIndexManager\Library\ListSorter;
+use Devouted\ElasticIndexManager\Library\Messages;
+use Devouted\ElasticIndexManager\Library\TableRenderer;
+use Devouted\ElasticIndexManager\Questions\SelectColumnQuestion;
+use Devouted\ElasticIndexManager\Questions\SelectIndexQuestion;
+use Devouted\ElasticIndexManager\Questions\SelectOrderQuestion;
 use Devouted\ElasticIndexManager\Questions\SelectTableActionQuestion;
-use Devouted\ElasticIndexManager\TableRenderer\TableRenderer;
 use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Question\ChoiceQuestion;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
-use Symfony\Component\Console\Question\Question;
 
 class ElasticIndexesTableView
 {
@@ -22,16 +24,16 @@ class ElasticIndexesTableView
 
     const ID_COLUMN = "ID";
     private ?FilterInterface $filter = null;
-    private string $sortOrder = 'asc';
-    private string $sortColumn = 'docs.count';
+    private ListSorter $listSorter;
 
     public function __construct(
         private readonly InputInterface  $input,
         private readonly OutputInterface $output,
         private readonly ElasticManager  $elasticManager,
-        private readonly QuestionHelper  $helper
+        private readonly QuestionHelper  $helper,
     )
     {
+        $this->listSorter = new ListSorter();
     }
 
     public function render(): void
@@ -41,27 +43,17 @@ class ElasticIndexesTableView
         $columns = $this->getDefinedColumns($indexes);
 
         $this->appendFilterOnIndexes($indexes);
-        $this->sortIndexes($indexes);
+        $this->listSorter->sortIndexes($indexes);
         $this->appendIdColumnToIndexes($indexes);
 
         $indexesList = $this->getIndexesList($indexes);
 
-        if (!empty($indexes)) {
-            $renderer = new TableRenderer($columns);
-            $renderer->render($indexes);
-        }
+        $this->renderSettingsTable();
+        $this->renderDataTable($columns, $indexes);
 
-        $question = new SelectTableActionQuestion();
-        $choice = $this->helper->ask($this->input, $this->output, $question);
+        $choice = $this->ask(new SelectTableActionQuestion());
         $this->runAction($choice, $indexesList, $indexes, $columns);
         $this->clearScreen();
-    }
-
-    private function sortIndexes(array &$indexes): void
-    {
-        usort($indexes, function ($a, $b) {
-            return $this->sortOrder === 'asc' ? $a[$this->sortColumn] <=> $b[$this->sortColumn] : $b[$this->sortColumn] <=> $a[$this->sortColumn];
-        });
     }
 
     private function appendIdColumnToIndexes(array &$indexes): void
@@ -69,12 +61,6 @@ class ElasticIndexesTableView
         foreach ($indexes as $key => $index) {
             $indexes[$key] = array_merge([self::ID_COLUMN => $key], $index);
         }
-    }
-
-    private function confirmationQuestion(): bool
-    {
-        $question = new ConfirmationQuestion('Do you want to continue? (y/n) ', false);
-        return $this->helper->ask($this->input, $this->output, $question);
     }
 
     private function appendFilterOnIndexes(array &$indexes): void
@@ -99,54 +85,44 @@ class ElasticIndexesTableView
                 $this->filter = new FilterNotEmptyIndexes();
                 break;
             case IndexActions::FILTER_BY_INDEX_PATTERN->value:
-                $search = trim($this->helper->ask($this->input, $this->output, new Question("Please provide a string that will try to mach: ")));
+                $search = $this->ask("Please provide a string that will try to mach: ");
                 $this->filter = new FilterByNameOfIndexes($search);
                 break;
             case IndexActions::DELETE_AN_INDEX->value:
-                $name = trim($this->helper->ask($this->input, $this->output, new Question("Please provide name or " . self::ID_COLUMN . " of the index: ")));
-                if (is_string($name) && $name !== "" &&
-                    (
-                        (is_numeric($name) && key_exists($name, $indexes)) ||
-                        in_array($name, $indexesList)
-                    )
-                ) {
-                    $name = is_numeric($name) ? $indexesList[$name] : $name;
-                    $this->output->writeln('<comment>Please confirm if you would like to delete index: ' . $name . '!</comment>');
-                    if ($this->confirmationQuestion()) {
-                        $this->elasticManager->deleteIndex($name);
-                        sleep(4);
-                    }
-                } else {
-                    $this->output->writeln('<error>You did not provide a name nor ID of the index. Reloading....</error>');
-                    sleep(5);
+                $name = $this->ask(new SelectIndexQuestion($indexesList));
+                if ($name === SelectIndexQuestion::CHOICE_BACK_TO_LIST) {
+                    break;
+                }
+                Messages::getInstance()->comment('Please confirm if you would like to delete index: ' . $name . '!');
+                if ($this->confirmationQuestion()) {
+                    $this->elasticManager->deleteIndex($name);
+                    sleep(4);
                 }
                 break;
             case IndexActions::RESET_FILTER->value:
                 $this->filter = null;
                 break;
+            case IndexActions::SHOW_INDEX_MAPPING->value:
+                $name = $this->ask(new SelectIndexQuestion($indexesList));
+                if ($name === SelectIndexQuestion::CHOICE_BACK_TO_LIST) {
+                    break;
+                }
+                $mapping = $this->elasticManager->getMappingForIndex($name);
+//                dd($name, $mapping);
+                break;
             case IndexActions::SORT->value:
-                $question = new ChoiceQuestion(
-                    'Chose column',
-                    $columns,
-                    0
+                $this->listSorter->setSorting(
+                    $this->ask(new SelectColumnQuestion($columns)),
+                    $this->ask(new SelectOrderQuestion())
                 );
-                $this->sortColumn = $this->helper->ask($this->input, $this->output, $question);
-                $question = new ChoiceQuestion(
-                    'Chose order',
-                    ['asc', 'desc'],
-                    0
-                );
-                $this->sortOrder = $this->helper->ask($this->input, $this->output, $question);
                 break;
             case IndexActions::DELETE_ALL_INDEXES_BY_FILTER->value:
-                if (is_null($this->filter)) {
-                    $this->output->writeln('<error>You did not provide any filter. Reloading</error>');
-                } else {
-                    $this->output->writeln('<comment>Indexes from list will be deleted!</comment>');
+                if (!is_null($this->filter)) {
+                    Messages::getInstance()->comment('Indexes from list will be deleted!');
                     print_r($indexesList);
                     if ($this->confirmationQuestion()) {
                         $this->elasticManager->deleteIndexes($indexesList);
-                        $this->output->writeln('<info>resetting filter and reloading...</info>');
+                        Messages::getInstance()->info('Resetting filter and reloading...');
                         $this->filter = null;
                         sleep(5);
                     }
@@ -164,4 +140,24 @@ class ElasticIndexesTableView
         return $cols;
     }
 
+    private function renderSettingsTable(): void
+    {
+        $renderer = new TableRenderer(['Applied settings']);
+        $data = [
+            ['<options=bold>Client</>', $this->elasticManager->getClientName()],
+            ['<options=bold>Filter</>', $this->filter?->getName() ?? "Not set"],
+            ['<options=bold>Sort</>', $this->listSorter->sortColumn . " " . $this->listSorter->sortOrder]
+        ];
+        $renderer->render($data);
+    }
+
+    private function renderDataTable(array $columns, array $indexes): void
+    {
+        if (!empty($indexes)) {
+            $renderer = new TableRenderer($columns);
+            $renderer->render($indexes);
+        } else {
+            Messages::getInstance()->comment('There are no indexes available');
+        }
+    }
 }

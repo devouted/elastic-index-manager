@@ -2,6 +2,8 @@
 
 namespace Devouted\ElasticIndexManager\Filter;
 
+use Devouted\ElasticIndexManager\Dictionary\IndexActions;
+
 class FilterByNameOfIndexes implements FilterInterface
 {
     public function __construct(private readonly string $search)
@@ -17,4 +19,10 @@ class FilterByNameOfIndexes implements FilterInterface
         }
         return array_values($indexList);
     }
+
+    public function getName(): string
+    {
+        return IndexActions::FILTER_BY_INDEX_PATTERN->value . ": <fg=green>" . $this->search . '</>';
+    }
+
 }

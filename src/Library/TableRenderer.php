@@ -1,6 +1,6 @@
 <?php
 
-namespace Devouted\ElasticIndexManager\TableRenderer;
+namespace Devouted\ElasticIndexManager\Library;
 
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Output\ConsoleOutput;

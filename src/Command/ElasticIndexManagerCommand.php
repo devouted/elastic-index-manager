@@ -2,7 +2,8 @@
 
 namespace Devouted\ElasticIndexManager\Command;
 
-use Devouted\ElasticIndexManager\ElasticManager\ElasticManager;
+use Devouted\ElasticIndexManager\Library\ElasticManager;
+use Devouted\ElasticIndexManager\Library\Messages;
 use Devouted\ElasticIndexManager\Views\SelectConnectionView;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -25,7 +26,8 @@ class ElasticIndexManagerCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $elasticManager = new ElasticManager($this->container, $output);
+        Messages::getInstance($output);
+        $elasticManager = new ElasticManager($this->container);
         $helper = $this->getHelper('question');
         $selectConnectionView = new SelectConnectionView($helper, $input, $output, $elasticManager);
         $selectConnectionView->render();
