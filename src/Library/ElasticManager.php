@@ -2,19 +2,22 @@
 
 namespace Devouted\ElasticIndexManager\Library;
 
-use Elasticsearch\Client;
+use Elastic\Elasticsearch\Client;
+use Elastic\Elasticsearch\ClientBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 class ElasticManager
 {
     private array $connectionServices = [];
     private ?string $chosenService = null;
+    private ?Client $client;
 
     public function __construct(
         private readonly ContainerInterface $container,
-        private ?Client                     $client = null
+        ?Client                             $client = null
     )
     {
+        $this->client = $client;
         $this->setConnectionList();
     }
 
@@ -26,7 +29,8 @@ class ElasticManager
         });
         $i = 0;
         foreach ($filteredServices as $filteredService) {
-            if ($this->container->get($filteredService) instanceof Client) {
+            $service = $this->container->get($filteredService);
+            if ($service instanceof Client || $service instanceof ClientBuilder) {
                 $this->connectionServices[$filteredService] = [$i, $filteredService];
                 $i++;
             }
@@ -41,7 +45,16 @@ class ElasticManager
     public function setClient(?string $choice = null): void
     {
         $this->chosenService = $choice;
-        $this->client = (is_null($choice)) ? null : $this->container->get($choice);
+        if (is_null($choice)) {
+            $this->client = null;
+            return;
+        }
+        $service = $this->container->get($choice);
+        if ($service instanceof ClientBuilder) {
+            $this->client = $service->build();
+        } else {
+            $this->client = $service;
+        }
     }
 
     public function hasClient(): bool
@@ -51,7 +64,7 @@ class ElasticManager
 
     public function getIndexList(): array
     {
-        return $this->client->cat()->indices();
+        return $this->client->cat()->indices()->asArray();
     }
 
     public function deleteIndexes(array $indexesList = []): void
@@ -75,12 +88,12 @@ class ElasticManager
 
     public function getMappingForIndex(string $name): array
     {
-        return $this->client->indices()->getMapping(['index' => $name]);
+        return $this->client->indices()->getMapping(['index' => $name])->asArray();
     }
 
     public function getTemplateForIndexPattern($pattern): array
     {
-        return $this->client->indices()->getIndexTemplate(['name' => $pattern]);
+        return $this->client->indices()->getIndexTemplate(['name' => $pattern])->asArray();
     }
 
     public function setTemplateForIndexPattern($pattern, $filename = 'index-template.json'): array
@@ -92,10 +105,10 @@ class ElasticManager
             'name' => $pattern,
             'body' => $templateData,
         ];
-        return $this->client->indices()->putTemplate($params);
+        return $this->client->indices()->putTemplate($params)->asArray();
     }
 
-    public function getLastRecords(string $index, int $records = 10) : array
+    public function getLastRecords(string $index, int $records = 10): array
     {
         $params = [
             'index' => $index,
@@ -107,6 +120,6 @@ class ElasticManager
             ]
         ];
 
-        return $this->client->search($params);
+        return $this->client->search($params)->asArray();
     }
 }

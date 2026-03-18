@@ -75,7 +75,7 @@ class ElasticIndexesTableView
         return empty($indexes) ? [] : array_column($indexes, 'index');
     }
 
-    private function runAction(string $choice, array $indexesList, array $columns): void
+    private function runAction(mixed $choice, array $indexesList, array $columns): void
     {
         switch ($choice) {
             case IndexTableActions::CHANGE_ELASTIC_CLIENT->value:

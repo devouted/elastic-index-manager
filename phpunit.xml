@@ -1,0 +1,11 @@
+<phpunit bootstrap="vendor/autoload.php">
+    <php>
+        <env name="KERNEL_CLASS" value="App\Kernel" />
+        <ini name="display_errors" value="Off" />
+    </php>
+    <testsuites>
+        <testsuite name="default">
+            <directory>tests</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

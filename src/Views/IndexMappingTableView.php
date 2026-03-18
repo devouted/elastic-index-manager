@@ -70,7 +70,7 @@ class IndexMappingTableView
         return $fields;
     }
 
-    private function runAction(string $choice): void
+    private function runAction(mixed $choice): void
     {
         switch ($choice) {
             case IndexMappingTableActions::BACK_TO_INDEX_LIST_TABLE->value:
