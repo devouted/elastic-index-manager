@@ -64,7 +64,23 @@ class ElasticManager
 
     public function getIndexList(): array
     {
-        return $this->client->cat()->indices()->asArray();
+        $indices = $this->client->cat()->indices([
+            'index' => '*',
+            'format' => 'json',
+            'h' => [
+                'health',
+                'status',
+                'index',
+                'uuid',
+                'pri',
+                'rep',
+                'docs.count',
+                'docs.deleted',
+                'store.size',
+                'pri.store.size'
+            ]
+        ]);
+        return $indices->asArray();
     }
 
     public function deleteIndexes(array $indexesList = []): void
