@@ -7,7 +7,7 @@ use Symfony\Component\Console\Question\ChoiceQuestion;
 class SelectConnectionQuestion extends ChoiceQuestion
 {
     const CHOICE_EXIT = "Exit";
-    const QUESTION = "Choose an witch connection to use:";
+    const QUESTION = "Choose which connection to use:";
 
     public function __construct(array $services)
     {

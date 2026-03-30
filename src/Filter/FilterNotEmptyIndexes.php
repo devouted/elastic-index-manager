@@ -8,12 +8,7 @@ class FilterNotEmptyIndexes implements FilterInterface
 {
     public function filter(array $indexList): array
     {
-        foreach ($indexList as $key => $index) {
-            if ($index['docs.count'] !== "0") {
-                unset($indexList[$key]);
-            }
-        }
-        return array_values($indexList);
+        return array_values(array_filter($indexList, fn($index) => $index['docs.count'] === "0"));
     }
 
     public function getName(): string

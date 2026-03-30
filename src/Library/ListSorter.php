@@ -14,14 +14,14 @@ class ListSorter
     {
         usort($indexes, function ($a, $b) {
 
-            $valA = str_contains($this->sortColumn, 'size') ? $this->convertToBytes($a[$this->sortColumn]) : $a[$this->sortColumn];
-            $valB = str_contains($this->sortColumn, 'size') ? $this->convertToBytes($b[$this->sortColumn]) : $b[$this->sortColumn];
+            $valA = str_contains($this->sortColumn, 'size') ? self::convertToBytes($a[$this->sortColumn]) : $a[$this->sortColumn];
+            $valB = str_contains($this->sortColumn, 'size') ? self::convertToBytes($b[$this->sortColumn]) : $b[$this->sortColumn];
 
             return $this->sortOrder === 'asc' ? $valA <=> $valB : $valB <=> $valA;
         });
     }
 
-    private function convertToBytes(string $size): int
+    public static function convertToBytes(string $size): int
     {
         if (!preg_match('/^\d+(\.\d+)?[kKmMgGtTpP]?[bB]?$/', $size)) {
             throw new InvalidArgumentException("Unknown Format: $size");

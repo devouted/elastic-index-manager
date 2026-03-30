@@ -3,6 +3,7 @@
 namespace Devouted\ElasticIndexManager\Library;
 
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Output\ConsoleOutput;
 
 class TableRenderer
@@ -16,10 +17,13 @@ class TableRenderer
         $this->table->setHeaders($columns);
     }
 
-    public function render($data): void
+    public function render($data, array $footerRow = []): void
     {
-        $this->table
-            ->setRows($data)
-            ->render();
+        $this->table->setRows($data);
+        if (!empty($footerRow)) {
+            $this->table->addRow(new TableSeparator());
+            $this->table->addRow($footerRow);
+        }
+        $this->table->render();
     }
 }

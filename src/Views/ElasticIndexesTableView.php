@@ -49,7 +49,7 @@ class ElasticIndexesTableView
         $indexesList = $this->getIndexesList($indexes);
 
         $this->renderSettingsTable();
-        $this->renderDataTable($columns, $indexes, 'There are no indexes available');
+        $this->renderIndexTable($columns, $indexes);
 
         $choice = $this->ask(new SelectIndexTableActionQuestion());
         $this->runAction($choice, $indexesList, $columns);
@@ -126,6 +126,53 @@ class ElasticIndexesTableView
         $cols = array_keys($indexes[0]);
         array_unshift($cols, self::ID_COLUMN);
         return $cols;
+    }
+
+    private function renderIndexTable(array $columns, array $indexes): void
+    {
+        if (empty($indexes)) {
+            Messages::getInstance()->comment('There are no indexes available');
+            return;
+        }
+        $footer = $this->buildSummaryFooter($columns, $indexes);
+        $renderer = new TableRenderer($columns);
+        $renderer->render($indexes, $footer);
+    }
+
+    private function buildSummaryFooter(array $columns, array $indexes): array
+    {
+        $sizeColumns = ['store.size', 'pri.store.size'];
+        $countColumns = ['docs.count', 'docs.deleted'];
+        $footer = [];
+        foreach ($columns as $col) {
+            if (in_array($col, $sizeColumns)) {
+                $totalBytes = array_sum(array_map(
+                    fn($idx) => ListSorter::convertToBytes($idx[$col]),
+                    $indexes
+                ));
+                $footer[] = '<options=bold>' . $this->formatBytes($totalBytes) . '</>';
+            } elseif (in_array($col, $countColumns)) {
+                $total = array_sum(array_column($indexes, $col));
+                $footer[] = '<options=bold>' . number_format($total) . '</>';
+            } elseif ($col === self::ID_COLUMN) {
+                $footer[] = '<options=bold>TOTAL</>';
+            } else {
+                $footer[] = '';
+            }
+        }
+        return $footer;
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+        $i = 0;
+        $value = (float) $bytes;
+        while ($value >= 1024 && $i < count($units) - 1) {
+            $value /= 1024;
+            $i++;
+        }
+        return round($value, 2) . $units[$i];
     }
 
     private function renderSettingsTable(): void
